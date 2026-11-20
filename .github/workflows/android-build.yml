@@ -22,10 +22,10 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v2
-
-      - name: Accept Android SDK licenses
-        run: |
-          yes | sdkmanager --licenses || true
+        with:
+          api-level: 33
+          target: android-33
+          build-tools: 33.0.2
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
