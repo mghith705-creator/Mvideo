@@ -2,11 +2,12 @@ import {
   createContext,
   useContext,
   useState,
-  useCallback,
   useEffect,
+  useCallback,
   type ReactNode,
 } from 'react';
 import type { Language } from '../data/translations';
+import { useAuth } from './AuthContext';
 
 type LanguageContextType = {
   language: Language;
@@ -19,6 +20,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>('ar');
+  const { user, profile } = useAuth();
 
   useEffect(() => {
     const saved = localStorage.getItem('mvideo-lang') as Language | null;
@@ -28,6 +30,15 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.lang = language;
   }, [language]);
+
+  useEffect(() => {
+    const syncLanguage = async () => {
+      if (user && profile) {
+        // Language preference sync placeholder
+      }
+    };
+    syncLanguage();
+  }, [user, profile]);
 
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);

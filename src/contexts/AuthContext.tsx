@@ -2,99 +2,115 @@ import {
   createContext,
   useContext,
   useState,
-  useCallback,
   useEffect,
+  useCallback,
   type ReactNode,
 } from 'react';
-import type { User } from '../data/mockData';
+import {
+  signUp,
+  signIn,
+  signOutUser,
+  resetPassword,
+  onAuthStateChange,
+  createUserProfile,
+  getUserProfile,
+  type AuthUser,
+  type UserProfile,
+} from '../config/firebase';
 
 type AuthContextType = {
-  user: User | null;
+  user: AuthUser | null;
+  profile: UserProfile | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
+  updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for saved session
-    const saved = localStorage.getItem('mvideo-user');
-    if (saved) {
-      try {
-        setUser(JSON.parse(saved));
-      } catch {
-        // ignore parse errors
+    const unsubscribe = onAuthStateChange(async (authUser) => {
+      setUser(authUser);
+      if (authUser) {
+        const userProfile = await getUserProfile(authUser.uid);
+        setProfile(userProfile);
+      } else {
+        setProfile(null);
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
-
-  const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
-    await delay(800);
-    if (!email || !password) {
-      throw new Error('Please enter email and password');
+    try {
+      await signIn(email, password);
+    } finally {
+      setIsLoading(false);
     }
-    const demoUser: User = {
-      id: 'u1',
-      name: 'User',
-      email,
-      avatar: `https://i.pravatar.cc/150?u=${email}`,
-      playlists: [],
-      likedVideos: [],
-      watchHistory: [],
-    };
-    setUser(demoUser);
-    localStorage.setItem('mvideo-user', JSON.stringify(demoUser));
-    setIsLoading(false);
   }, []);
 
   const signup = useCallback(
     async (name: string, email: string, password: string) => {
       setIsLoading(true);
-      await delay(800);
-      if (!name || !email || !password) {
-        throw new Error('Please fill all fields');
+      try {
+        const authUser = await signUp(email, password, name);
+        await createUserProfile({
+          uid: authUser.uid,
+          name,
+          email: authUser.email || email,
+          playlists: [],
+          likedVideos: [],
+          watchHistory: [],
+          createdAt: new Date().toISOString(),
+        });
+        setUser(authUser);
+        const userProfile = await getUserProfile(authUser.uid);
+        setProfile(userProfile);
+      } finally {
+        setIsLoading(false);
       }
-      const demoUser: User = {
-        id: 'u1',
-        name,
-        email,
-        avatar: `https://i.pravatar.cc/150?u=${email}`,
-        playlists: [],
-        likedVideos: [],
-        watchHistory: [],
-      };
-      setUser(demoUser);
-      localStorage.setItem('mvideo-user', JSON.stringify(demoUser));
-      setIsLoading(false);
     },
     []
   );
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await signOutUser();
     setUser(null);
-    localStorage.removeItem('mvideo-user');
+    setProfile(null);
   }, []);
+
+  const updateProfileFn = useCallback(async (updates: Partial<UserProfile>) => {
+    if (!user) throw new Error('No authenticated user');
+    const { updateDoc, doc } = await import('firebase/firestore');
+    const { getFirebaseDb } = await import('../config/firebase');
+    await updateDoc(doc(getFirebaseDb(), 'users', user.uid), updates);
+    const updatedProfile = await getUserProfile(user.uid);
+    setProfile(updatedProfile);
+  }, [user]);
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        profile,
         login,
         signup,
         logout,
+        resetPassword,
         isAuthenticated: !!user,
         isLoading,
+        updateProfile: updateProfileFn,
       }}
     >
       {children}
