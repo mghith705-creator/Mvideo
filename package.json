@@ -6,12 +6,22 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:web": "vite build",
+    "build:android": "npm run build:web && npx cap copy && npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:build": "cd android && ./gradlew assembleRelease",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
     "test:ui": "vitest --ui"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/cli": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/keyboard": "^8.0.6",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4",
     "@tailwindcss/postcss": "^4.3.5",
     "clsx": "^2.1.1",
     "firebase": "^13.4.0",
