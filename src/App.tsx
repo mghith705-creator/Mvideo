@@ -5,6 +5,7 @@ import { VideoPlayer } from './components/VideoPlayer';
 import { Upload } from './components/Upload';
 import { Playlists } from './components/Playlists';
 import { Account } from './components/Account';
+import { AuthForm } from './components/AuthForm';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -12,6 +13,7 @@ function Routes() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/login" component={AuthForm} />
       <Route path="/video/:id" component={VideoPlayer} />
       <Route path="/upload" component={Upload} />
       <Route path="/playlists" component={Playlists} />
